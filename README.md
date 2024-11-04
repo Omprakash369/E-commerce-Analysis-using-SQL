@@ -56,9 +56,155 @@ Find the no. of orders placed on the basis of the payment installments that have
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-```select column_name,data_type
+```SQL
+select column_name,data_type
 from `target_customer.INFORMATION_SCHEMA.COLUMNS`
 where table_name = 'customers'
-
+````
+```SQL
+select min(order_purchase_timestamp) as start_date,
+max(order_purchase_timestamp) as end_date
+from `target_customer.orders `
+```
+```SQL
+select count(distinct customer_city) as count_city, count(distinct customer_state) as count_state
+from `target_customer.customers`
+```
+```SQL
+select pre_year, count(order_id) as count_of_orders
+from
+(select *, extract (year from order_purchase_timestamp) as pre_year
+from `target_customer.orders `) tb
+group by pre_year
+```
+```SQL
+select year, month,  count(order_id) as count_of_orders 
+from
+(select *, extract (year from order_purchase_timestamp) as year,extract(month from order_purchase_timestamp ) as month
+from `target_customer.orders `) tb
+group by year,month
+order by year,month
+```
+```SQL
+select time_of_order,count(*) as no_of_orders 
+from(
+select 
+case 
+when time_ between 0 and 6 then 'Dawn'
+when time_ between 7 and 12 then 'Mornings'
+when time_ between 13 and 18 then 'Afternoon'
+when time_ between 19 and 23 then 'Night'
+end as time_of_order,time_
+from (
+select extract(hour from order_purchase_timestamp) as time_
+from `target_customer.orders ` ) A ) B
+group by time_of_order
+```
+```SQL
+select tb.customer_state,tb.month, count(tb.order_id) as Number_of_orders
+from(
+select *,extract(month from order_purchase_timestamp) as month 
+from `target_customer.orders `  o join `target_customer.customers` c
+on o.Customer_id = c.customer_id
+join `target_customer.geolocation` g
+on g.geolocation_zip_code_prefix = c.customer_zip_code_prefix
+) tb
+group by tb.customer_state,tb.month
+order by tb.customer_state,tb.month
+```
+```SQL
+select g.geolocation_state,count(c.customer_id) as no_of_customers
+from  `target_customer.geolocation` g join `target_customer.customers` c
+on g.geolocation_zip_code_prefix = c.customer_zip_code_prefix
+group by g.geolocation_state
+order by no_of_customers desc
+```
+```SQL
+select((sum(case when year = 2018 and month between 01 and 08 then payment_value end) - sum(case when year = 2017 and month between 01 and 08 then payment_value end))/sum(case when year = 2018 and month between 01 and 08 then payment_value end))*100 as percentage 
+from
+ (
+select payment_value,extract(year from O.order_purchase_timestamp) as year,extract(month from O.order_purchase_timestamp) as month 
+from `target_customer.orders ` O inner join `target_customer.payments ` P 
+on O.order_id = P.order_id
+) A
+```
+```SQL
+select geo.geolocation_state,sum(oi.price) as total_order_price, avg(oi.price) as average_value
+from `target_customer.order_items ` oi  join `target_customer.sellers ` sel
+on oi.seller_id = sel.seller_id 
+join `target_customer.geolocation` geo
+on sel.seller_zip_code_prefix = geo.geolocation_zip_code_prefix
+group by geo.geolocation_state
+order by geo.geolocation_state
+limit 50
+```
+```SQL
+select geo.geolocation_state,round(sum(oi.freight_value),2) as total_freight_value, round(avg(oi.freight_value),2) as Average_freight_value
+from `target_customer.order_items ` oi  join `target_customer.sellers ` sel
+on oi.seller_id = sel.seller_id 
+join `target_customer.geolocation` geo
+on sel.seller_zip_code_prefix = geo.geolocation_zip_code_prefix
+group by geo.geolocation_state
+order by geo.geolocation_state
+limit 50
+```
+```SQL
+select date_diff(date(order_delivered_customer_date),date(order_purchase_timestamp),day) as dilever_time, 
+date_diff(date(order_delivered_customer_date),date(order_estimated_delivery_date),day ) as diff_estimated_dilevery_date
+from `target_customer
+```
+```SQL
+select geo.geolocation_state,round(avg(oi.freight_value),2) as average_freight_value 
+from `target_customer.order_items ` oi  join `target_customer.sellers ` sel
+on oi.seller_id = sel.seller_id 
+join `target_customer.geolocation` geo
+on sel.seller_zip_code_prefix = geo.geolocation_zip_code_prefix
+group by geo.geolocation_state 
+order by average_freight_value  desc
+limit 5
+```
+```SQL
+select geo.geolocation_state,round(avg(oi.freight_value),2) as lowest_average_freight_value
+from `target_customer.order_items ` oi  join `target_customer.sellers ` sel
+on oi.seller_id = sel.seller_id
+join `target_customer.geolocation` geo
+on sel.seller_zip_code_prefix = geo.geolocation_zip_code_prefix
+group by geo.geolocation_state
+order by lowest_average_freight_value asc
+```
+```SQL
+select C.customer_state,avg(date_diff(date(order_delivered_customer_date),date(order_purchase_timestamp),day)) as average_deliver_time 
+from `target_customer.orders ` o inner join `target_customer.customers` C       
+on o.customer_id = C.customer_id
+group by C.customer_state
+order by average_deliver_time desc
+limit 5 
+```
+```SQL
+select C.customer_state,round(avg(date_diff(date(order_delivered_customer_date),date(order_purchase_timestamp),day)),2) as average_deliver_time 
+from `target_customer.orders ` o inner join `target_customer.customers` C       
+on o.customer_id = C.customer_id
+group by C.customer_state
+order by average_deliver_time asc
+limit 5 
+```
+```SQL
+select distinct customer_state
+from
+(
+select *,date_diff(date(order_delivered_customer_date),date(order_purchase_timestamp),day) as dilever_time,
+date_diff(date(order_delivered_customer_date),date(order_estimated_delivery_date),day) as diff_estimated_dilevery_date
+from `target_customer.orders ` o join `target_customer.customers` c 
+on o.customer_id = c.customer_id
+) A 
+where order_status = 'shipped'
+```
+```SQL
+select P.payment_installments,count(O.order_id) as no_of_orders 
+from `target_customer.orders `  O join `target_customer.payments ` P  
+on O.order_id = P.order_id 
+group by P.payment_installments 
+order by 1
+```
 
 
